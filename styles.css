@@ -265,13 +265,23 @@ a:hover { text-decoration: underline; }
 
 /* ---------- In Detail panel (ephemeral tab) ---------- */
 #panel-detail .panel-scroll { position: relative; padding-top: 0.9rem; }
-#panel-detail h3 { color: #f4f4f5; font-size: 1.05rem; margin-bottom: 0.2rem; padding-right: 1.6rem; }
+#panel-detail h3 { color: #f4f4f5; font-size: 1.05rem; margin-bottom: 0.2rem; padding-right: 4.5rem; }
 .d-close-panel {
-  position: absolute; top: 0.55rem; right: 0.7rem;
-  background: none; border: none; color: var(--muted);
-  font-size: 1.15rem; cursor: pointer; line-height: 1;
+  position: absolute; top: 0.65rem; right: 0.8rem;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--text);
+  padding: 0.25rem 0.5rem;
+  font-size: 0.66rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  cursor: pointer;
+  line-height: 1;
+  font-family: var(--font);
 }
-.d-close-panel:hover { color: var(--text); }
+.d-close-panel:hover { border-color: var(--lime); color: var(--lime); }
 #panel-detail .d-status { font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.07em; margin-bottom: 0.45rem; }
 #panel-detail .d-dates { color: var(--muted); font-size: 0.76rem; margin-bottom: 0.4rem; }
 #panel-detail .d-note { color: #a1a1aa; font-size: 0.76rem; margin-bottom: 0.55rem; }

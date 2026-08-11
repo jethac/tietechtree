@@ -402,7 +402,7 @@
     return `<div class="t-name">${esc(n.n)}${n.alt ? ` <span class="t-dates">/ ${esc(n.alt)}</span>` : ""}</div>` +
       `<div class="t-status status-chip ${s.cls}">${s.label}</div>` +
       (dates ? `<div class="t-dates">${esc(dates)}</div>` : "") +
-      (n.fan ? `<div class="t-note">image on original chart: ${esc(n.fan)}</div>` : "") +
+      (n.fan ? `<div class="t-note">image: ${esc(n.fan)}</div>` : "") +
       `<div class="t-hint">click to select — links &amp; notes appear in the side panel</div>`;
   }
   function esc(s) { return s.replace(/&/g, "&amp;").replace(/</g, "&lt;"); }
@@ -451,7 +451,7 @@
   }
 
   function edgeTypeLabel(e) {
-    return (e.type === "l" ? "loose connection" : "direct development") + (e.q ? " · uncertain (per the chart)" : "");
+    return (e.type === "l" ? "loose connection" : "direct development") + (e.q ? " · uncertain link" : "");
   }
 
   function selectEdge(x) {
@@ -487,7 +487,7 @@
       `<h3>${esc(n.n)}${n.alt ? ` <span style="font-weight:400;color:#71717a">/ ${esc(n.alt)}</span>` : ""}</h3>` +
       `<div class="d-status status-chip ${s.cls}">${s.label}</div>` +
       (dates ? `<div class="d-dates">${esc(dates)}</div>` : "") +
-      (n.fan ? `<div class="d-note">Image on the original chart is ${esc(n.fan)}.</div>` : "") +
+      (n.fan ? `<div class="d-note">Image: ${esc(n.fan)}.</div>` : "") +
       (n.note ? `<div class="d-note">${esc(n.note)}</div>` : "") +
       `<div class="d-links">${links.join("")}</div>` +
       loreHtml(LORE.ships[n.id]);
@@ -564,6 +564,12 @@
     if (!g || g.classList.contains("dim")) { clearSelection(); return; }
     const n = nodesById.get(g.dataset.id);
     select(n);
+  });
+  // clicking empty map space (incl. era bands) closes the In Detail tab
+  svg.addEventListener("click", ev => {
+    if (pan && pan.moved) return;
+    if (ev.target.closest(".node") || ev.target.closest(".edge-hit")) return;
+    clearSelection();
   });
   stage.addEventListener("dblclick", ev => {
     ev.preventDefault();
