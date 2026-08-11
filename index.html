@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TIE Tech Tree — interactive version of u/GuderianX's chart</title>
+  <meta name="description" content="An interactive, readable version of u/GuderianX's TIE Tech Tree v8: every TIE variant, its development lineage, Canon/Legends status, and Wookieepedia links." />
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+  <div class="app">
+    <!-- LEFT: chart -->
+    <section class="preview">
+      <header class="preview-top">
+        <div class="brand-line">
+          <span class="dot"></span>
+          <span class="title">tie-tech-tree</span>
+          <span class="badge">SVG</span>
+        </div>
+        <div class="transport">
+          <button id="btnLegends" type="button" class="active">Legends/EU: on</button>
+          <button id="btnZoomIn" type="button" title="Zoom in">+</button>
+          <button id="btnZoomOut" type="button" title="Zoom out">−</button>
+          <button id="btnFit" type="button" title="Fit chart to view">Fit</button>
+          <button id="btnInfo" type="button" class="btn-info">Info</button>
+          <span class="count" id="shipCount">— ships</span>
+        </div>
+      </header>
+
+      <div class="stage" id="stage">
+        <div class="chart-legend" aria-hidden="true">
+          <div><span class="swatch" style="background:var(--c-both)"></span>Canon and EU</div>
+          <div><span class="swatch" style="background:var(--c-canon)"></span>just Canon</div>
+          <div><span class="swatch" style="background:var(--c-legends)"></span>just EU (Legends)</div>
+          <div><svg class="edge-sample" height="6"><line x1="0" y1="3" x2="26" y2="3" stroke="#c98500" stroke-width="2"/></svg>direct development</div>
+          <div><svg class="edge-sample" height="6"><line x1="0" y1="3" x2="26" y2="3" stroke="#c98500" stroke-width="2" stroke-dasharray="5 4"/></svg>loose connection</div>
+          <div><span class="edge-sample" style="color:#898781;font-weight:700;text-align:center">?</span>uncertain link</div>
+        </div>
+        <div class="tooltip" id="tooltip"></div>
+        <div class="detail" id="detail">
+          <button class="d-close" id="detailClose" type="button" aria-label="Close">×</button>
+          <div id="detailBody"></div>
+        </div>
+      </div>
+
+      <footer class="hud">
+        <p class="hud-credit">
+          Original chart by
+          <a href="https://www.reddit.com/user/GuderianX/" target="_blank" rel="noopener noreferrer">u/GuderianX</a>
+          on
+          <a href="https://www.reddit.com/r/StarWarsShips/comments/1vlkb5i/tie_tech_tree_v8/" target="_blank" rel="noopener noreferrer">r/StarWarsShips</a>
+          · interactive version by
+          <a href="https://x.com/jetha" target="_blank" rel="noopener noreferrer">Jetha Chan</a>
+        </p>
+        <span class="hud-meta">
+          <a href="https://github.com/jethac/tietechtree" target="_blank" rel="noopener noreferrer" style="color:#111">GitHub</a>
+        </span>
+      </footer>
+    </section>
+
+    <!-- RIGHT: sidebar -->
+    <aside class="sidebar">
+      <nav class="tabs" role="tablist">
+        <button class="tab active" data-tab="about" type="button" role="tab" aria-selected="true">About</button>
+        <button class="tab" data-tab="ships" type="button" role="tab" aria-selected="false">Ships</button>
+      </nav>
+
+      <div class="tab-panels">
+        <!-- ABOUT -->
+        <div id="panel-about" class="panel active" role="tabpanel">
+          <div class="panel-scroll">
+            <h1>TIE Tech Tree</h1>
+            <p class="lede">
+              An interactive version of <strong>u/GuderianX</strong>'s
+              <em>TIE Tech Tree v8</em> — the development lineage of (nearly) every
+              TIE-series ship across <strong>Canon</strong> and
+              <strong>Legends&nbsp;(EU)</strong>, with Wookieepedia links for every ship.
+            </p>
+
+            <section class="block credit">
+              <h2>Credit</h2>
+              <p>
+                <strong>The research and the original chart are not mine.</strong>
+                This is a web adaptation of the <em>TIE Tech Tree v8</em> infographic by
+                <a href="https://www.reddit.com/user/GuderianX/" target="_blank" rel="noopener noreferrer"><strong>u/GuderianX</strong></a>,
+                posted on
+                <a href="https://www.reddit.com/r/StarWarsShips/comments/1vlkb5i/tie_tech_tree_v8/" target="_blank" rel="noopener noreferrer">r/StarWarsShips</a>.
+                Ship names, dates, lineage arrows, and annotations are transcribed from that chart.
+              </p>
+            </section>
+
+            <section class="block">
+              <h2>How to read it</h2>
+              <p>
+                Node color is continuity: <span class="status-chip both">Canon and EU</span>,
+                <span class="status-chip canon">just Canon</span>,
+                <span class="status-chip legends">just EU (Legends)</span>.
+                Solid arrows are <strong>direct development</strong>; dashed arrows are a
+                <strong>loose connection</strong>; a <strong>?</strong> marks links the
+                original chart flags as uncertain.
+              </p>
+              <p>
+                <strong>Scroll</strong> to zoom, <strong>drag</strong> to pan,
+                <strong>hover</strong> a ship for a summary, <strong>click</strong> it for
+                notes and its Wookieepedia page(s). The
+                <kbd>Legends/EU</kbd> button hides or shows everything that exists only in
+                the Expanded Universe.
+              </p>
+            </section>
+
+            <section class="block">
+              <h2>About the dates</h2>
+              <p>
+                Per the original chart: all dates for ships that are not exclusively Canon
+                are the <strong>Legends date of introduction</strong>, and most dates are
+                approximations — sometimes based on the first battle a ship was seen in.
+                Where the chart gives both, the tooltip shows the Legends and Canon dates
+                separately.
+              </p>
+            </section>
+
+            <section class="block">
+              <h2>License</h2>
+              <p>
+                Site code is <a href="https://github.com/jethac/tietechtree/blob/main/LICENSE" target="_blank" rel="noopener noreferrer">MIT</a> ·
+                source on <a href="https://github.com/jethac/tietechtree" target="_blank" rel="noopener noreferrer">GitHub</a>.
+                Star Wars and all ship names are the property of Lucasfilm/Disney; this is a
+                fan resource with no affiliation. Ship data belongs to the community —
+                original research by u/GuderianX, article links to
+                <a href="https://starwars.fandom.com/" target="_blank" rel="noopener noreferrer">Wookieepedia</a>.
+              </p>
+            </section>
+          </div>
+        </div>
+
+        <!-- SHIPS -->
+        <div id="panel-ships" class="panel" role="tabpanel">
+          <div class="panel-scroll">
+            <h2>Ship index</h2>
+            <input id="shipFilter" class="ship-filter" type="search" placeholder="Filter ships…" />
+            <div id="shipList"></div>
+          </div>
+        </div>
+      </div>
+    </aside>
+  </div>
+
+  <script src="./data.js"></script>
+  <script src="./main.js"></script>
+</body>
+</html>

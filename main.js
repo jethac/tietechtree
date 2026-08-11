@@ -1,0 +1,364 @@
+/* TIE Tech Tree — chart host. No dependencies. */
+(() => {
+  "use strict";
+
+  const DATA = window.TIE_DATA;
+  const WIKI = "https://starwars.fandom.com/wiki/";
+  const SEARCH = "https://starwars.fandom.com/wiki/Special:Search?query=";
+
+  const STATUS = {
+    both:    { label: "Canon and EU", cls: "both" },
+    canon:   { label: "just Canon", cls: "canon" },
+    legends: { label: "just EU (Legends)", cls: "legends" },
+    hub:     { label: "annotation", cls: "both" }
+  };
+
+  const nodesById = new Map(DATA.nodes.map(n => [n.id, n]));
+
+  // ---------- SVG scaffolding ----------
+  const NS = "http://www.w3.org/2000/svg";
+  const stage = document.getElementById("stage");
+  const svg = document.createElementNS(NS, "svg");
+  stage.appendChild(svg);
+
+  const defs = document.createElementNS(NS, "defs");
+  defs.innerHTML =
+    '<marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">' +
+    '<path d="M0,0 L10,5 L0,10 z" fill="#c98500"/></marker>';
+  svg.appendChild(defs);
+
+  const gEdges = document.createElementNS(NS, "g");
+  const gNodes = document.createElementNS(NS, "g");
+  svg.appendChild(gEdges);
+  svg.appendChild(gNodes);
+
+  const cssVar = name => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+  const COLOR = { both: cssVar("--c-both"), canon: cssVar("--c-canon"), legends: cssVar("--c-legends"), hub: "#71717a" };
+
+  // ---------- edges ----------
+  const edgeEls = [];
+  for (const e of DATA.edges) {
+    const a = nodesById.get(e.f), b = nodesById.get(e.t);
+    if (!a || !b) continue;
+    const path = document.createElementNS(NS, "path");
+    const dx = b.x - a.x, dy = b.y - a.y;
+    // gentle curve: horizontal-ish links bow via mid-x, vertical-ish via mid-y
+    const c1x = a.x + dx * 0.5, c1y = a.y, c2x = a.x + dx * 0.5, c2y = b.y;
+    path.setAttribute("d", `M ${a.x} ${a.y} C ${c1x} ${c1y}, ${c2x} ${c2y}, ${b.x} ${b.y}`);
+    path.setAttribute("class", "edge");
+    path.setAttribute("stroke", "#c98500");
+    path.setAttribute("stroke-width", "2");
+    path.setAttribute("marker-end", "url(#arr)");
+    if (e.type === "l") path.setAttribute("stroke-dasharray", "7 6");
+    path.setAttribute("opacity", e.type === "l" ? "0.75" : "0.9");
+    gEdges.appendChild(path);
+    let qEl = null;
+    if (e.q) {
+      qEl = document.createElementNS(NS, "text");
+      qEl.setAttribute("x", a.x + dx * 0.5);
+      qEl.setAttribute("y", a.y + dy * 0.5 - 6);
+      qEl.setAttribute("text-anchor", "middle");
+      qEl.setAttribute("class", "edge-q");
+      qEl.textContent = "?";
+      gEdges.appendChild(qEl);
+    }
+    edgeEls.push({ e, path, qEl });
+  }
+
+  // ---------- nodes ----------
+  const nodeEls = new Map();
+  for (const n of DATA.nodes) {
+    const g = document.createElementNS(NS, "g");
+    g.setAttribute("class", "node");
+    g.setAttribute("data-id", n.id);
+
+    if (n.st === "hub") {
+      const r = document.createElementNS(NS, "rect");
+      const w = 190, h = 46;
+      r.setAttribute("x", n.x - w / 2); r.setAttribute("y", n.y - h / 2);
+      r.setAttribute("width", w); r.setAttribute("height", h);
+      r.setAttribute("rx", 8);
+      r.setAttribute("fill", "#17171b");
+      r.setAttribute("stroke", "#3f3f46");
+      r.setAttribute("stroke-width", "1.5");
+      g.appendChild(r);
+      const t = document.createElementNS(NS, "text");
+      t.setAttribute("x", n.x); t.setAttribute("y", n.y - 3);
+      t.setAttribute("text-anchor", "middle");
+      t.setAttribute("font-size", "13");
+      t.setAttribute("font-weight", "700");
+      t.textContent = "Imperial Classified";
+      const t2 = document.createElementNS(NS, "text");
+      t2.setAttribute("x", n.x); t2.setAttribute("y", n.y + 13);
+      t2.setAttribute("text-anchor", "middle");
+      t2.setAttribute("font-size", "13");
+      t2.setAttribute("font-weight", "700");
+      t2.textContent = "Flight Yards";
+      g.appendChild(t); g.appendChild(t2);
+    } else {
+      const c = document.createElementNS(NS, "circle");
+      c.setAttribute("cx", n.x); c.setAttribute("cy", n.y);
+      c.setAttribute("r", 9);
+      c.setAttribute("fill", COLOR[n.st]);
+      c.setAttribute("stroke", "#08080a");
+      c.setAttribute("stroke-width", "2.5");
+      g.appendChild(c);
+
+      const t = document.createElementNS(NS, "text");
+      t.setAttribute("x", n.x); t.setAttribute("y", n.y + 30);
+      t.setAttribute("text-anchor", "middle");
+      t.setAttribute("font-size", "15");
+      t.setAttribute("font-weight", "600");
+      t.textContent = n.n;
+      g.appendChild(t);
+
+      const date = n.dl || n.dc;
+      if (date) {
+        const d = document.createElementNS(NS, "text");
+        d.setAttribute("x", n.x); d.setAttribute("y", n.y + 48);
+        d.setAttribute("text-anchor", "middle");
+        d.setAttribute("font-size", "12");
+        d.setAttribute("class", "n-date");
+        d.textContent = date + (n.dc && n.dl ? ` · ${n.dc} (canon)` : "");
+        g.appendChild(d);
+      }
+    }
+    gNodes.appendChild(g);
+    nodeEls.set(n.id, g);
+  }
+
+  // group labels
+  for (const grp of DATA.groups) {
+    const t = document.createElementNS(NS, "text");
+    t.setAttribute("x", grp.x); t.setAttribute("y", grp.y);
+    t.setAttribute("text-anchor", "middle");
+    t.setAttribute("class", "section-label");
+    t.textContent = grp.label;
+    gNodes.appendChild(t);
+  }
+
+  // ---------- viewBox pan/zoom ----------
+  const PAD = 120;
+  const xs = DATA.nodes.map(n => n.x), ys = DATA.nodes.map(n => n.y);
+  const world = {
+    x: Math.min(...xs) - PAD, y: Math.min(...ys) - PAD,
+    w: Math.max(...xs) - Math.min(...xs) + PAD * 2,
+    h: Math.max(...ys) - Math.min(...ys) + PAD * 2
+  };
+  let vb = { ...world };
+
+  function fit() {
+    const ar = stage.clientWidth / Math.max(1, stage.clientHeight);
+    const war = world.w / world.h;
+    if (war > ar) { vb = { x: world.x, w: world.w, h: world.w / ar, y: world.y - (world.w / ar - world.h) / 2 }; }
+    else { vb = { y: world.y, h: world.h, w: world.h * ar, x: world.x - (world.h * ar - world.w) / 2 }; }
+    apply();
+  }
+  function apply() { svg.setAttribute("viewBox", `${vb.x} ${vb.y} ${vb.w} ${vb.h}`); }
+
+  function zoomAt(cx, cy, k) {
+    const rect = stage.getBoundingClientRect();
+    const wx = vb.x + (cx - rect.left) / rect.width * vb.w;
+    const wy = vb.y + (cy - rect.top) / rect.height * vb.h;
+    const minW = 300, maxW = world.w * 2.5;
+    const nw = Math.min(maxW, Math.max(minW, vb.w * k));
+    const nk = nw / vb.w;
+    vb = { x: wx - (wx - vb.x) * nk, y: wy - (wy - vb.y) * nk, w: vb.w * nk, h: vb.h * nk };
+    apply();
+  }
+
+  stage.addEventListener("wheel", ev => {
+    ev.preventDefault();
+    zoomAt(ev.clientX, ev.clientY, ev.deltaY > 0 ? 1.15 : 1 / 1.15);
+  }, { passive: false });
+
+  let pan = null;
+  stage.addEventListener("pointerdown", ev => {
+    if (ev.button !== 0) return;
+    pan = { x: ev.clientX, y: ev.clientY, vx: vb.x, vy: vb.y, moved: false };
+    stage.classList.add("panning");
+    stage.setPointerCapture(ev.pointerId);
+  });
+  stage.addEventListener("pointermove", ev => {
+    if (!pan) return;
+    const rect = stage.getBoundingClientRect();
+    const dx = (ev.clientX - pan.x) / rect.width * vb.w;
+    const dy = (ev.clientY - pan.y) / rect.height * vb.h;
+    if (Math.abs(ev.clientX - pan.x) + Math.abs(ev.clientY - pan.y) > 4) pan.moved = true;
+    vb.x = pan.vx - dx; vb.y = pan.vy - dy;
+    apply();
+  });
+  stage.addEventListener("pointerup", () => { stage.classList.remove("panning"); setTimeout(() => { pan = null; }, 0); });
+
+  document.getElementById("btnZoomIn").addEventListener("click", () => {
+    const r = stage.getBoundingClientRect();
+    zoomAt(r.left + r.width / 2, r.top + r.height / 2, 1 / 1.3);
+  });
+  document.getElementById("btnZoomOut").addEventListener("click", () => {
+    const r = stage.getBoundingClientRect();
+    zoomAt(r.left + r.width / 2, r.top + r.height / 2, 1.3);
+  });
+  document.getElementById("btnFit").addEventListener("click", fit);
+  window.addEventListener("resize", fit);
+
+  function centerOn(n) {
+    vb.x = n.x - vb.w / 2; vb.y = n.y - vb.h / 2;
+    if (vb.w > 1400) { const k = 1200 / vb.w, r = stage.getBoundingClientRect(); zoomAt(r.left + r.width / 2, r.top + r.height / 2, k); vb.x = n.x - vb.w / 2; vb.y = n.y - vb.h / 2; }
+    apply();
+  }
+
+  // ---------- Legends toggle ----------
+  let showLegends = true;
+  const btnLegends = document.getElementById("btnLegends");
+  const countEl = document.getElementById("shipCount");
+
+  function refreshVisibility() {
+    let visible = 0;
+    for (const n of DATA.nodes) {
+      const hide = !showLegends && n.st === "legends";
+      nodeEls.get(n.id).classList.toggle("dim", hide);
+      if (!hide && n.st !== "hub") visible++;
+    }
+    for (const { e, path, qEl } of edgeEls) {
+      const hide = !showLegends &&
+        (nodesById.get(e.f).st === "legends" || nodesById.get(e.t).st === "legends");
+      path.classList.toggle("dim", hide);
+      if (qEl) qEl.classList.toggle("dim", hide);
+    }
+    countEl.textContent = `${visible} ships`;
+    btnLegends.classList.toggle("active", showLegends);
+    btnLegends.textContent = showLegends ? "Legends/EU: on" : "Legends/EU: off";
+    if (selected && !showLegends && nodesById.get(selected).st === "legends") clearSelection();
+    buildShipIndex();
+  }
+  btnLegends.addEventListener("click", () => { showLegends = !showLegends; refreshVisibility(); });
+
+  // ---------- tooltip ----------
+  const tip = document.getElementById("tooltip");
+  function tipHtml(n) {
+    const s = STATUS[n.st];
+    const dates = [n.dl && `${n.dl}${n.dc ? " (Legends)" : ""}`, n.dc && `${n.dc}${n.dl ? " (Canon)" : ""}`].filter(Boolean).join(" · ");
+    return `<div class="t-name">${esc(n.n)}${n.alt ? ` <span class="t-dates">/ ${esc(n.alt)}</span>` : ""}</div>` +
+      `<div class="t-status status-chip ${s.cls}">${s.label}</div>` +
+      (dates ? `<div class="t-dates">${esc(dates)}</div>` : "") +
+      (n.fan ? `<div class="t-note">image on original chart: ${esc(n.fan)}</div>` : "") +
+      `<div class="t-hint">click for details + Wookieepedia links</div>`;
+  }
+  function esc(s) { return s.replace(/&/g, "&amp;").replace(/</g, "&lt;"); }
+
+  // ---------- selection / detail card ----------
+  const detail = document.getElementById("detail");
+  let selected = null;
+
+  function clearSelection() {
+    selected = null;
+    detail.classList.remove("show");
+    for (const g of nodeEls.values()) g.classList.remove("selected");
+    for (const { path } of edgeEls) path.style.opacity = "";
+  }
+
+  function select(n) {
+    selected = n.id;
+    for (const [id, g] of nodeEls) g.classList.toggle("selected", id === n.id);
+    const s = STATUS[n.st];
+    const dates = [n.dl && `${n.dl}${n.dc ? " (Legends)" : ""}`, n.dc && `${n.dc}${n.dl ? " (Canon)" : ""}`].filter(Boolean).join(" · ");
+    const links = [];
+    if (n.wc) links.push(`<a href="${WIKI}${n.wc}" target="_blank" rel="noopener noreferrer">Wookieepedia (Canon)</a>`);
+    if (n.wl) links.push(`<a href="${WIKI}${n.wl}" target="_blank" rel="noopener noreferrer">Wookieepedia${n.wc ? " (Legends)" : ""}</a>`);
+    if (!links.length && n.search) links.push(`<a href="${SEARCH}${encodeURIComponent(n.search)}" target="_blank" rel="noopener noreferrer">Search Wookieepedia</a>`);
+    document.getElementById("detailBody").innerHTML =
+      `<h3>${esc(n.n)}${n.alt ? ` <span style="font-weight:400;color:#71717a">/ ${esc(n.alt)}</span>` : ""}</h3>` +
+      `<div class="d-status status-chip ${s.cls}">${s.label}</div>` +
+      (dates ? `<div class="d-dates">${esc(dates)}</div>` : "") +
+      (n.fan ? `<div class="d-note">Image on the original chart is ${esc(n.fan)}.</div>` : "") +
+      (n.note ? `<div class="d-note">${esc(n.note)}</div>` : "") +
+      `<div class="d-links">${links.join("")}</div>`;
+    detail.classList.add("show");
+  }
+
+  document.getElementById("detailClose").addEventListener("click", clearSelection);
+  document.addEventListener("keydown", ev => { if (ev.key === "Escape") clearSelection(); });
+
+  gNodes.addEventListener("pointermove", ev => {
+    const g = ev.target.closest(".node");
+    if (!g || g.classList.contains("dim")) { tip.classList.remove("show"); return; }
+    const n = nodesById.get(g.dataset.id);
+    if (n.st === "hub") {
+      tip.innerHTML = `<div class="t-name">${esc(n.n)}</div><div class="t-note">${esc(n.note)}</div>`;
+    } else {
+      tip.innerHTML = tipHtml(n);
+    }
+    const r = stage.getBoundingClientRect();
+    tip.style.left = Math.min(ev.clientX - r.left + 14, r.width - 310) + "px";
+    tip.style.top = (ev.clientY - r.top + 14) + "px";
+    tip.classList.add("show");
+  });
+  gNodes.addEventListener("pointerleave", () => tip.classList.remove("show"));
+
+  gNodes.addEventListener("click", ev => {
+    if (pan && pan.moved) return;
+    const g = ev.target.closest(".node");
+    if (!g || g.classList.contains("dim")) { clearSelection(); return; }
+    const n = nodesById.get(g.dataset.id);
+    select(n);
+  });
+  stage.addEventListener("dblclick", ev => {
+    ev.preventDefault();
+    zoomAt(ev.clientX, ev.clientY, 1 / 1.6);
+  });
+
+  // ---------- ship index (sidebar table view) ----------
+  const shipList = document.getElementById("shipList");
+  const shipFilter = document.getElementById("shipFilter");
+
+  function buildShipIndex() {
+    const term = (shipFilter.value || "").toLowerCase();
+    const groups = [
+      ["both", "Canon and EU"],
+      ["canon", "Just Canon"],
+      ["legends", "Just EU (Legends)"]
+    ];
+    let html = "";
+    for (const [st, label] of groups) {
+      if (st === "legends" && !showLegends) continue;
+      const ships = DATA.nodes
+        .filter(n => n.st === st && n.n.toLowerCase().includes(term))
+        .sort((a, b) => a.n.localeCompare(b.n));
+      if (!ships.length) continue;
+      html += `<div class="ship-group-h status-chip ${st}">${label} · ${ships.length}</div>`;
+      for (const n of ships) {
+        html += `<button class="ship-row" type="button" data-id="${n.id}">` +
+          `<span>${esc(n.n)}</span><span class="s-date">${esc(n.dl || n.dc || "")}</span></button>`;
+      }
+    }
+    shipList.innerHTML = html || '<p style="color:#71717a">No ships match.</p>';
+  }
+  shipFilter.addEventListener("input", buildShipIndex);
+  shipList.addEventListener("click", ev => {
+    const row = ev.target.closest(".ship-row");
+    if (!row) return;
+    const n = nodesById.get(row.dataset.id);
+    select(n);
+    centerOn(n);
+    document.querySelector(".app").classList.remove("show-info");
+  });
+
+  // ---------- tabs ----------
+  for (const tab of document.querySelectorAll(".tab")) {
+    tab.addEventListener("click", () => {
+      for (const t of document.querySelectorAll(".tab")) {
+        t.classList.toggle("active", t === tab);
+        t.setAttribute("aria-selected", t === tab ? "true" : "false");
+      }
+      for (const p of document.querySelectorAll(".panel")) {
+        p.classList.toggle("active", p.id === "panel-" + tab.dataset.tab);
+      }
+    });
+  }
+  const btnInfo = document.getElementById("btnInfo");
+  if (btnInfo) btnInfo.addEventListener("click", () => document.querySelector(".app").classList.toggle("show-info"));
+
+  // ---------- boot ----------
+  refreshVisibility();
+  fit();
+})();
