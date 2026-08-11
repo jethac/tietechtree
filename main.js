@@ -3,6 +3,7 @@
   "use strict";
 
   const DATA = window.TIE_DATA;
+  const LORE = window.TIE_LORE || { ships: {}, edges: {} };
   const WIKI = "https://starwars.fandom.com/wiki/";
   const SEARCH = "https://starwars.fandom.com/wiki/Special:Search?query=";
 
@@ -155,6 +156,11 @@
     if (e.type === "l") path.setAttribute("stroke-dasharray", "7 6");
     path.setAttribute("opacity", e.type === "l" ? "0.75" : "0.9");
     gEdges.appendChild(path);
+    const hit = document.createElementNS(NS, "path");
+    hit.setAttribute("d", path.getAttribute("d"));
+    hit.setAttribute("class", "edge-hit");
+    hit.dataset.key = `${e.f}->${e.t}`;
+    gEdges.appendChild(hit);
     let qEl = null;
     if (e.q) {
       qEl = document.createElementNS(NS, "text");
@@ -165,8 +171,9 @@
       qEl.textContent = "?";
       gEdges.appendChild(qEl);
     }
-    edgeEls.push({ e, path, qEl });
+    edgeEls.push({ e, path, qEl, hit });
   }
+  const edgesByKey = new Map(edgeEls.map(x => [`${x.e.f}->${x.e.t}`, x]));
 
   // ---------- nodes ----------
   const nodeEls = new Map();
@@ -373,10 +380,11 @@
       nodeEls.get(n.id).classList.toggle("dim", hide);
       if (!hide && n.st !== "hub") visible++;
     }
-    for (const { e, path, qEl } of edgeEls) {
+    for (const { e, path, qEl, hit } of edgeEls) {
       const hide = !showLegends &&
         (nodesById.get(e.f).st === "legends" || nodesById.get(e.t).st === "legends");
       path.classList.toggle("dim", hide);
+      hit.classList.toggle("dim", hide);
       if (qEl) qEl.classList.toggle("dim", hide);
     }
     countEl.textContent = `${visible} ships`;
@@ -412,10 +420,46 @@
     detail.classList.remove("show");
     sidebar.classList.remove("has-sel");
     for (const g of nodeEls.values()) g.classList.remove("selected");
-    for (const { path } of edgeEls) path.style.opacity = "";
+    for (const { path } of edgeEls) path.classList.remove("selected");
+  }
+
+  function loreHtml(text) {
+    if (!text) return "";
+    return `<div class="d-sum">${text.split(/\n\n+/).map(p => `<p>${esc(p)}</p>`).join("")}</div>`;
+  }
+
+  function showPanels(html) {
+    document.getElementById("detailBody").innerHTML = html;
+    sideDetailBody.innerHTML = html;
+    detail.classList.add("show");
+    sidebar.classList.add("has-sel");
+    document.getElementById("sideDetail").scrollTop = 0;
+  }
+
+  function edgeTypeLabel(e) {
+    return (e.type === "l" ? "loose connection" : "direct development") + (e.q ? " · uncertain (per the chart)" : "");
+  }
+
+  function selectEdge(x) {
+    const { e, path } = x;
+    clearSelection();
+    path.classList.add("selected");
+    const a = nodesById.get(e.f), b = nodesById.get(e.t);
+    const lore = LORE.edges[`${e.f}->${e.t}`];
+    showPanels(
+      `<h3>${esc(a.n)} <span style="color:#8fb300">→</span> ${esc(b.n)}</h3>` +
+      `<div class="d-status" style="color:#c98500">${edgeTypeLabel(e)}</div>` +
+      (e.note ? `<div class="d-note">${esc(e.note)}</div>` : "") +
+      (lore ? loreHtml(lore) : `<div class="d-note">No write-up for this link yet.</div>`) +
+      `<div class="d-edge-ships">` +
+      `<button type="button" data-ship="${a.id}">◂ ${esc(a.n)}</button>` +
+      `<button type="button" data-ship="${b.id}">${esc(b.n)} ▸</button>` +
+      `</div>`
+    );
   }
 
   function select(n) {
+    clearSelection();
     selected = n.id;
     for (const [id, g] of nodeEls) g.classList.toggle("selected", id === n.id);
     const s = STATUS[n.st];
@@ -431,11 +475,19 @@
       (dates ? `<div class="d-dates">${esc(dates)}</div>` : "") +
       (n.fan ? `<div class="d-note">Image on the original chart is ${esc(n.fan)}.</div>` : "") +
       (n.note ? `<div class="d-note">${esc(n.note)}</div>` : "") +
-      `<div class="d-links">${links.join("")}</div>`;
-    document.getElementById("detailBody").innerHTML = html;
-    sideDetailBody.innerHTML = html;
-    detail.classList.add("show");
-    sidebar.classList.add("has-sel");
+      `<div class="d-links">${links.join("")}</div>` +
+      loreHtml(LORE.ships[n.id]);
+    showPanels(html);
+  }
+
+  for (const el of [document.getElementById("detailBody"), sideDetailBody]) {
+    el.addEventListener("click", ev => {
+      const b = ev.target.closest("[data-ship]");
+      if (!b) return;
+      const n = nodesById.get(b.dataset.ship);
+      select(n);
+      centerOn(n);
+    });
   }
 
   detail.addEventListener("pointerdown", ev => ev.stopPropagation());
@@ -458,6 +510,39 @@
     tip.classList.add("show");
   });
   gNodes.addEventListener("pointerleave", () => tip.classList.remove("show"));
+
+  // edge hover + click
+  let hoveredEdge = null;
+  gEdges.addEventListener("pointermove", ev => {
+    const h = ev.target.closest(".edge-hit");
+    if (hoveredEdge && (!h || edgesByKey.get(h.dataset.key) !== hoveredEdge)) {
+      hoveredEdge.path.classList.remove("hovered");
+      hoveredEdge = null;
+    }
+    if (!h) { tip.classList.remove("show"); return; }
+    const x = edgesByKey.get(h.dataset.key);
+    hoveredEdge = x;
+    x.path.classList.add("hovered");
+    const a = nodesById.get(x.e.f), b = nodesById.get(x.e.t);
+    tip.innerHTML =
+      `<div class="t-name">${esc(a.n)} → ${esc(b.n)}</div>` +
+      `<div class="t-status" style="color:#c98500">${edgeTypeLabel(x.e)}</div>` +
+      `<div class="t-hint">click for what changed between them</div>`;
+    const r = stage.getBoundingClientRect();
+    tip.style.left = Math.min(ev.clientX - r.left + 14, r.width - 310) + "px";
+    tip.style.top = (ev.clientY - r.top + 14) + "px";
+    tip.classList.add("show");
+  });
+  gEdges.addEventListener("pointerleave", () => {
+    if (hoveredEdge) { hoveredEdge.path.classList.remove("hovered"); hoveredEdge = null; }
+    tip.classList.remove("show");
+  });
+  gEdges.addEventListener("click", ev => {
+    if (pan && pan.moved) return;
+    const h = ev.target.closest(".edge-hit");
+    if (!h) return;
+    selectEdge(edgesByKey.get(h.dataset.key));
+  });
 
   gNodes.addEventListener("click", ev => {
     if (pan && pan.moved) return;

@@ -119,6 +119,8 @@ a:hover { text-decoration: underline; }
   background:
     radial-gradient(ellipse at center, #121218 0%, #08080a 70%);
   cursor: grab;
+  user-select: none;
+  -webkit-user-select: none;
 }
 .stage.panning { cursor: grabbing; }
 .stage svg { display: block; width: 100%; height: 100%; }
@@ -270,7 +272,24 @@ a:hover { text-decoration: underline; }
   background: linear-gradient(135deg, #14160c 0%, #121214 60%);
   font-size: 0.8rem;
   line-height: 1.5;
+  max-height: 52vh;
+  overflow-y: auto;
 }
+.d-sum { margin-top: 0.6rem; }
+.d-sum p { color: #b4b4bc; font-size: 0.78rem; margin-bottom: 0.55rem; }
+.d-sum p:last-child { margin-bottom: 0; }
+.d-edge-ships { display: flex; flex-wrap: wrap; gap: 0.45rem; margin-top: 0.6rem; }
+.d-edge-ships button {
+  background: var(--bg-elevated);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 0.3rem 0.55rem;
+  font-size: 0.7rem;
+  cursor: pointer;
+  font-family: var(--font);
+}
+.d-edge-ships button:hover { border-color: var(--lime); color: var(--lime); }
 .sidebar.has-sel .side-detail { display: block; }
 .side-detail h3 { color: #f4f4f5; font-size: 0.95rem; margin-bottom: 0.15rem; padding-right: 1.4rem; }
 .side-detail .d-close {
@@ -452,6 +471,15 @@ kbd {
 .node:hover image { filter: brightness(1.25); }
 .edge { fill: none; }
 .edge.dim { opacity: 0.08; }
+.edge.hovered { stroke-width: 3.5px; opacity: 1; }
+.edge.selected { stroke: var(--lime); stroke-width: 3px; opacity: 1; }
+.edge-hit {
+  fill: none;
+  stroke: transparent;
+  stroke-width: 18px;
+  cursor: pointer;
+}
+.edge-hit.dim { pointer-events: none; }
 .edge-q {
   fill: #898781;
   font-size: 13px;
