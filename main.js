@@ -391,7 +391,6 @@
     btnLegends.classList.toggle("active", showLegends);
     btnLegends.textContent = showLegends ? "Legends/EU: on" : "Legends/EU: off";
     if (selected && !showLegends && nodesById.get(selected).st === "legends") clearSelection();
-    buildShipIndex();
   }
   btnLegends.addEventListener("click", () => { showLegends = !showLegends; refreshVisibility(); });
 
@@ -412,15 +411,29 @@
   const detail = document.getElementById("detail");
   let selected = null;
 
-  const sidebar = document.querySelector(".sidebar");
-  const sideDetailBody = document.getElementById("sideDetailBody");
+  const tabDetail = document.getElementById("tabDetail");
+  const detailPanelBody = document.getElementById("detailPanelBody");
+
+  function activateTab(name) {
+    for (const t of document.querySelectorAll(".tab")) {
+      t.classList.toggle("active", t.dataset.tab === name);
+      t.setAttribute("aria-selected", t.dataset.tab === name ? "true" : "false");
+    }
+    for (const p of document.querySelectorAll(".panel")) {
+      p.classList.toggle("active", p.id === "panel-" + name);
+    }
+  }
 
   function clearSelection() {
     selected = null;
     detail.classList.remove("show");
-    sidebar.classList.remove("has-sel");
     for (const g of nodeEls.values()) g.classList.remove("selected");
     for (const { path } of edgeEls) path.classList.remove("selected");
+    if (!tabDetail.hidden) {
+      const wasActive = tabDetail.classList.contains("active");
+      tabDetail.hidden = true;
+      if (wasActive) activateTab("about");
+    }
   }
 
   function loreHtml(text) {
@@ -430,10 +443,11 @@
 
   function showPanels(html) {
     document.getElementById("detailBody").innerHTML = html;
-    sideDetailBody.innerHTML = html;
+    detailPanelBody.innerHTML = html;
     detail.classList.add("show");
-    sidebar.classList.add("has-sel");
-    document.getElementById("sideDetail").scrollTop = 0;
+    tabDetail.hidden = false;
+    activateTab("detail");
+    detailPanelBody.closest(".panel-scroll").scrollTop = 0;
   }
 
   function edgeTypeLabel(e) {
@@ -480,7 +494,7 @@
     showPanels(html);
   }
 
-  for (const el of [document.getElementById("detailBody"), sideDetailBody]) {
+  for (const el of [document.getElementById("detailBody"), detailPanelBody]) {
     el.addEventListener("click", ev => {
       const b = ev.target.closest("[data-ship]");
       if (!b) return;
@@ -492,7 +506,7 @@
 
   detail.addEventListener("pointerdown", ev => ev.stopPropagation());
   document.getElementById("detailClose").addEventListener("click", clearSelection);
-  document.getElementById("sideDetailClose").addEventListener("click", clearSelection);
+  document.getElementById("detailPanelClose").addEventListener("click", clearSelection);
   document.addEventListener("keydown", ev => { if (ev.key === "Escape") clearSelection(); });
 
   gNodes.addEventListener("pointermove", ev => {
@@ -556,53 +570,9 @@
     zoomAt(ev.clientX, ev.clientY, 1 / 1.6);
   });
 
-  // ---------- ship index (sidebar table view) ----------
-  const shipList = document.getElementById("shipList");
-  const shipFilter = document.getElementById("shipFilter");
-
-  function buildShipIndex() {
-    const term = (shipFilter.value || "").toLowerCase();
-    const groups = [
-      ["both", "Canon and EU"],
-      ["canon", "Just Canon"],
-      ["legends", "Just EU (Legends)"]
-    ];
-    let html = "";
-    for (const [st, label] of groups) {
-      if (st === "legends" && !showLegends) continue;
-      const ships = DATA.nodes
-        .filter(n => n.st === st && n.n.toLowerCase().includes(term))
-        .sort((a, b) => a.n.localeCompare(b.n));
-      if (!ships.length) continue;
-      html += `<div class="ship-group-h status-chip ${st}">${label} · ${ships.length}</div>`;
-      for (const n of ships) {
-        html += `<button class="ship-row" type="button" data-id="${n.id}">` +
-          `<span>${esc(n.n)}</span><span class="s-date">${esc(n.dl || n.dc || "")}</span></button>`;
-      }
-    }
-    shipList.innerHTML = html || '<p style="color:#71717a">No ships match.</p>';
-  }
-  shipFilter.addEventListener("input", buildShipIndex);
-  shipList.addEventListener("click", ev => {
-    const row = ev.target.closest(".ship-row");
-    if (!row) return;
-    const n = nodesById.get(row.dataset.id);
-    select(n);
-    centerOn(n);
-    document.querySelector(".app").classList.remove("show-info");
-  });
-
   // ---------- tabs ----------
   for (const tab of document.querySelectorAll(".tab")) {
-    tab.addEventListener("click", () => {
-      for (const t of document.querySelectorAll(".tab")) {
-        t.classList.toggle("active", t === tab);
-        t.setAttribute("aria-selected", t === tab ? "true" : "false");
-      }
-      for (const p of document.querySelectorAll(".panel")) {
-        p.classList.toggle("active", p.id === "panel-" + tab.dataset.tab);
-      }
-    });
+    tab.addEventListener("click", () => activateTab(tab.dataset.tab));
   }
   const btnInfo = document.getElementById("btnInfo");
   if (btnInfo) btnInfo.addEventListener("click", () => document.querySelector(".app").classList.toggle("show-info"));

@@ -60,16 +60,20 @@
 
     <!-- RIGHT: sidebar -->
     <aside class="sidebar">
-      <div class="side-detail" id="sideDetail">
-        <button class="d-close" id="sideDetailClose" type="button" aria-label="Close">×</button>
-        <div id="sideDetailBody"></div>
-      </div>
       <nav class="tabs" role="tablist">
+        <button class="tab tab-detail" data-tab="detail" id="tabDetail" type="button" role="tab" aria-selected="false" hidden>In Detail</button>
         <button class="tab active" data-tab="about" type="button" role="tab" aria-selected="true">About</button>
-        <button class="tab" data-tab="ships" type="button" role="tab" aria-selected="false">Ships</button>
       </nav>
 
       <div class="tab-panels">
+        <!-- IN DETAIL (ephemeral — appears when a ship or arrow is selected) -->
+        <div id="panel-detail" class="panel" role="tabpanel">
+          <div class="panel-scroll">
+            <button class="d-close d-close-panel" id="detailPanelClose" type="button" aria-label="Close">×</button>
+            <div id="detailPanelBody"></div>
+          </div>
+        </div>
+
         <!-- ABOUT -->
         <div id="panel-about" class="panel active" role="tabpanel">
           <div class="panel-scroll">
@@ -113,12 +117,13 @@
               </p>
               <p>
                 <strong>Scroll</strong> to zoom, <strong>drag</strong> to pan,
-                <strong>hover</strong> a ship for a summary, <strong>click</strong> it —
-                a summary, notes, and Wookieepedia links appear in a panel at the top of
-                this sidebar. <strong>Arrows are clickable too</strong>: each one explains
-                what changed between the two ships it connects. The
-                <kbd>Legends/EU</kbd> button hides or shows everything that exists only
-                in the Expanded Universe.
+                <strong>hover</strong> a ship for a quick look, <strong>click</strong> it —
+                its summary, notes, and Wookieepedia links open in an
+                <strong>In&nbsp;Detail</strong> tab in this sidebar.
+                <strong>Arrows are clickable too</strong>: each one explains what changed
+                between the two ships it connects. Press <kbd>Esc</kbd> or close the tab
+                to come back here. The <kbd>Legends/EU</kbd> button hides or shows
+                everything that exists only in the Expanded Universe.
               </p>
             </section>
 
@@ -147,14 +152,6 @@
           </div>
         </div>
 
-        <!-- SHIPS -->
-        <div id="panel-ships" class="panel" role="tabpanel">
-          <div class="panel-scroll">
-            <h2>Ship index</h2>
-            <input id="shipFilter" class="ship-filter" type="search" placeholder="Filter ships…" />
-            <div id="shipList"></div>
-          </div>
-        </div>
       </div>
     </aside>
   </div>
