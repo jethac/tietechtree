@@ -246,6 +246,8 @@
   let pan = null;
   stage.addEventListener("pointerdown", ev => {
     if (ev.button !== 0) return;
+    // never hijack interactions with the detail card or its links
+    if (ev.target.closest(".detail") || ev.target.closest("a")) return;
     pan = { x: ev.clientX, y: ev.clientY, vx: vb.x, vy: vb.y, moved: false };
     stage.classList.add("panning");
     stage.setPointerCapture(ev.pointerId);
@@ -347,6 +349,7 @@
     detail.classList.add("show");
   }
 
+  detail.addEventListener("pointerdown", ev => ev.stopPropagation());
   document.getElementById("detailClose").addEventListener("click", clearSelection);
   document.addEventListener("keydown", ev => { if (ev.key === "Escape") clearSelection(); });
 
