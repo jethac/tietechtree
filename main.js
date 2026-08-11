@@ -15,18 +15,49 @@
 
   const nodesById = new Map(DATA.nodes.map(n => [n.id, n]));
 
-  // sprite sizing + layout respacing (images need more room than dots)
+  // ---------- timeline scale ----------
+  // piecewise-linear x scale over years relative to the Battle of Yavin
+  const T_STOPS = [
+    [-70, 0], [-30, 480], [-22, 780], [-18, 1140], [-12, 1520], [-5, 1900],
+    [-1, 2260], [0, 2480], [1, 2700], [4, 3120], [11, 3560], [25, 3860],
+    [45, 4160], [115, 4420], [140, 4900]
+  ];
+  const MX = 140, Y0 = 260, ROW_H = 190;
+  function xOf(t) {
+    const s = T_STOPS;
+    if (t <= s[0][0]) return MX + s[0][1];
+    for (let i = 1; i < s.length; i++) {
+      if (t <= s[i][0]) {
+        const f = (t - s[i - 1][0]) / (s[i][0] - s[i - 1][0]);
+        return MX + s[i - 1][1] + f * (s[i][1] - s[i - 1][1]);
+      }
+    }
+    return MX + s[s.length - 1][1];
+  }
+  const ERAS = [
+    { label: "Republic era", t0: -70, t1: -19 },
+    { label: "Rise of the Empire", t0: -19, t1: -5 },
+    { label: "Galactic Civil War", t0: -5, t1: 4.9 },
+    { label: "New Republic and beyond", t0: 4.9, t1: 50 },
+    { label: "Legacy era", t0: 110, t1: 140 }
+  ];
+  const TL_TOP = 40;
+  const TL_BOTTOM = Y0 + 16 * ROW_H + 150;
+
+  // sprite sizing + node placement
   const SPR = window.TIE_SPRITES || {};
-  const SX = 1.35, SY = 1.55, IMG_MAX = 110;
+  const IMG_MAX = 110;
   for (const n of DATA.nodes) {
-    n.x = Math.round(n.x * SX); n.y = Math.round(n.y * SY);
+    if (typeof n.t === "number") {
+      n.x = Math.round(xOf(n.t));
+      n.y = Y0 + n.row * ROW_H;
+    }
     const s = SPR[n.id];
     if (s) {
       const k = IMG_MAX / Math.max(s[0], s[1]);
       n.dw = Math.round(s[0] * k); n.dh = Math.round(s[1] * k);
     }
   }
-  for (const g of DATA.groups) { g.x = Math.round(g.x * SX); g.y = Math.round(g.y * SY); }
 
   // distance from node center at which edges should stop
   function nodeRadius(n) {
@@ -46,13 +77,59 @@
     '<path d="M0,0 L10,5 L0,10 z" fill="#c98500"/></marker>';
   svg.appendChild(defs);
 
+  const gBands = document.createElementNS(NS, "g");
   const gEdges = document.createElementNS(NS, "g");
   const gNodes = document.createElementNS(NS, "g");
+  svg.appendChild(gBands);
   svg.appendChild(gEdges);
   svg.appendChild(gNodes);
 
   const cssVar = name => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
   const COLOR = { both: cssVar("--c-both"), canon: cssVar("--c-canon"), legends: cssVar("--c-legends"), hub: "#71717a" };
+
+  // ---------- era bands + Battle of Yavin marker ----------
+  for (let i = 0; i < ERAS.length; i++) {
+    const e = ERAS[i];
+    const x0 = xOf(e.t0), x1 = xOf(e.t1);
+    if (i % 2 === 0) {
+      const r = document.createElementNS(NS, "rect");
+      r.setAttribute("x", x0); r.setAttribute("y", TL_TOP);
+      r.setAttribute("width", x1 - x0); r.setAttribute("height", TL_BOTTOM - TL_TOP);
+      r.setAttribute("fill", "rgba(255,255,255,0.022)");
+      gBands.appendChild(r);
+    }
+    const edge = document.createElementNS(NS, "line");
+    edge.setAttribute("x1", x0); edge.setAttribute("x2", x0);
+    edge.setAttribute("y1", TL_TOP); edge.setAttribute("y2", TL_BOTTOM);
+    edge.setAttribute("stroke", "#2a2a30"); edge.setAttribute("stroke-width", "1");
+    gBands.appendChild(edge);
+    for (const y of [TL_TOP + 40, TL_BOTTOM - 24]) {
+      const t = document.createElementNS(NS, "text");
+      t.setAttribute("x", (x0 + x1) / 2); t.setAttribute("y", y);
+      t.setAttribute("text-anchor", "middle");
+      t.setAttribute("class", "era-label");
+      t.textContent = e.label;
+      gBands.appendChild(t);
+    }
+  }
+  {
+    const yx = xOf(0);
+    const line = document.createElementNS(NS, "line");
+    line.setAttribute("x1", yx); line.setAttribute("x2", yx);
+    line.setAttribute("y1", TL_TOP + 66); line.setAttribute("y2", TL_BOTTOM - 44);
+    line.setAttribute("stroke", "#e4e4e7"); line.setAttribute("stroke-width", "1.5");
+    line.setAttribute("stroke-dasharray", "3 7");
+    line.setAttribute("opacity", "0.55");
+    gBands.appendChild(line);
+    for (const y of [TL_TOP + 84, TL_BOTTOM - 48]) {
+      const t = document.createElementNS(NS, "text");
+      t.setAttribute("x", yx); t.setAttribute("y", y);
+      t.setAttribute("text-anchor", "middle");
+      t.setAttribute("class", "yavin-label");
+      t.textContent = "◆ BATTLE OF YAVIN · 0 BBY/ABY";
+      gBands.appendChild(t);
+    }
+  }
 
   // ---------- edges ----------
   const edgeEls = [];
@@ -203,14 +280,15 @@
     const t = document.createElementNS(NS, "text");
     t.setAttribute("x", grp.x); t.setAttribute("y", grp.y);
     t.setAttribute("text-anchor", "middle");
-    t.setAttribute("class", "section-label");
-    t.textContent = grp.label;
+    t.setAttribute("class", grp.caption ? "section-caption" : "section-label");
+    t.textContent = grp.caption ? `— ${grp.label} —` : grp.label;
     gNodes.appendChild(t);
   }
 
   // ---------- viewBox pan/zoom ----------
   const PAD = 120;
-  const xs = DATA.nodes.map(n => n.x), ys = DATA.nodes.map(n => n.y);
+  const xs = DATA.nodes.map(n => n.x).concat([xOf(-70), xOf(140)]);
+  const ys = DATA.nodes.map(n => n.y).concat([TL_TOP, TL_BOTTOM]);
   const world = {
     x: Math.min(...xs) - PAD, y: Math.min(...ys) - PAD,
     w: Math.max(...xs) - Math.min(...xs) + PAD * 2,
@@ -243,21 +321,24 @@
     zoomAt(ev.clientX, ev.clientY, ev.deltaY > 0 ? 1.15 : 1 / 1.15);
   }, { passive: false });
 
+  // pan starts only after real movement, so clicks on ships/links always land
   let pan = null;
   stage.addEventListener("pointerdown", ev => {
     if (ev.button !== 0) return;
-    // never hijack interactions with the detail card or its links
     if (ev.target.closest(".detail") || ev.target.closest("a")) return;
-    pan = { x: ev.clientX, y: ev.clientY, vx: vb.x, vy: vb.y, moved: false };
-    stage.classList.add("panning");
-    stage.setPointerCapture(ev.pointerId);
+    pan = { x: ev.clientX, y: ev.clientY, vx: vb.x, vy: vb.y, moved: false, id: ev.pointerId };
   });
   stage.addEventListener("pointermove", ev => {
     if (!pan) return;
+    if (!pan.moved) {
+      if (Math.abs(ev.clientX - pan.x) + Math.abs(ev.clientY - pan.y) < 7) return;
+      pan.moved = true;
+      stage.classList.add("panning");
+      try { stage.setPointerCapture(pan.id); } catch (_) {}
+    }
     const rect = stage.getBoundingClientRect();
     const dx = (ev.clientX - pan.x) / rect.width * vb.w;
     const dy = (ev.clientY - pan.y) / rect.height * vb.h;
-    if (Math.abs(ev.clientX - pan.x) + Math.abs(ev.clientY - pan.y) > 4) pan.moved = true;
     vb.x = pan.vx - dx; vb.y = pan.vy - dy;
     apply();
   });
@@ -315,7 +396,7 @@
       `<div class="t-status status-chip ${s.cls}">${s.label}</div>` +
       (dates ? `<div class="t-dates">${esc(dates)}</div>` : "") +
       (n.fan ? `<div class="t-note">image on original chart: ${esc(n.fan)}</div>` : "") +
-      `<div class="t-hint">click for details + Wookieepedia links</div>`;
+      `<div class="t-hint">click to select — links &amp; notes appear in the side panel</div>`;
   }
   function esc(s) { return s.replace(/&/g, "&amp;").replace(/</g, "&lt;"); }
 
@@ -323,9 +404,13 @@
   const detail = document.getElementById("detail");
   let selected = null;
 
+  const sidebar = document.querySelector(".sidebar");
+  const sideDetailBody = document.getElementById("sideDetailBody");
+
   function clearSelection() {
     selected = null;
     detail.classList.remove("show");
+    sidebar.classList.remove("has-sel");
     for (const g of nodeEls.values()) g.classList.remove("selected");
     for (const { path } of edgeEls) path.style.opacity = "";
   }
@@ -336,21 +421,26 @@
     const s = STATUS[n.st];
     const dates = [n.dl && `${n.dl}${n.dc ? " (Legends)" : ""}`, n.dc && `${n.dc}${n.dl ? " (Canon)" : ""}`].filter(Boolean).join(" · ");
     const links = [];
-    if (n.wc) links.push(`<a href="${WIKI}${n.wc}" target="_blank" rel="noopener noreferrer">Wookieepedia (Canon)</a>`);
-    if (n.wl) links.push(`<a href="${WIKI}${n.wl}" target="_blank" rel="noopener noreferrer">Wookieepedia${n.wc ? " (Legends)" : ""}</a>`);
-    if (!links.length && n.search) links.push(`<a href="${SEARCH}${encodeURIComponent(n.search)}" target="_blank" rel="noopener noreferrer">Search Wookieepedia</a>`);
-    document.getElementById("detailBody").innerHTML =
+    if (n.wc) links.push(`<a href="${WIKI}${n.wc}" target="_blank" rel="noopener noreferrer">Wookieepedia (Canon) ↗</a>`);
+    if (n.wl) links.push(`<a href="${WIKI}${n.wl}" target="_blank" rel="noopener noreferrer">Wookieepedia${n.wc ? " (Legends)" : ""} ↗</a>`);
+    if (!links.length && n.search) links.push(`<a href="${SEARCH}${encodeURIComponent(n.search)}" target="_blank" rel="noopener noreferrer">Search Wookieepedia ↗</a>`);
+    const html =
+      (SPR[n.id] ? `<img class="d-ship" src="ships/${n.id}.png" alt="" />` : "") +
       `<h3>${esc(n.n)}${n.alt ? ` <span style="font-weight:400;color:#71717a">/ ${esc(n.alt)}</span>` : ""}</h3>` +
       `<div class="d-status status-chip ${s.cls}">${s.label}</div>` +
       (dates ? `<div class="d-dates">${esc(dates)}</div>` : "") +
       (n.fan ? `<div class="d-note">Image on the original chart is ${esc(n.fan)}.</div>` : "") +
       (n.note ? `<div class="d-note">${esc(n.note)}</div>` : "") +
       `<div class="d-links">${links.join("")}</div>`;
+    document.getElementById("detailBody").innerHTML = html;
+    sideDetailBody.innerHTML = html;
     detail.classList.add("show");
+    sidebar.classList.add("has-sel");
   }
 
   detail.addEventListener("pointerdown", ev => ev.stopPropagation());
   document.getElementById("detailClose").addEventListener("click", clearSelection);
+  document.getElementById("sideDetailClose").addEventListener("click", clearSelection);
   document.addEventListener("keydown", ev => { if (ev.key === "Escape") clearSelection(); });
 
   gNodes.addEventListener("pointermove", ev => {

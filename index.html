@@ -60,6 +60,10 @@
 
     <!-- RIGHT: sidebar -->
     <aside class="sidebar">
+      <div class="side-detail" id="sideDetail">
+        <button class="d-close" id="sideDetailClose" type="button" aria-label="Close">×</button>
+        <div id="sideDetailBody"></div>
+      </div>
       <nav class="tabs" role="tablist">
         <button class="tab active" data-tab="about" type="button" role="tab" aria-selected="true">About</button>
         <button class="tab" data-tab="ships" type="button" role="tab" aria-selected="false">Ships</button>
@@ -100,11 +104,19 @@
                 original chart flags as uncertain.
               </p>
               <p>
+                The chart is a <strong>timeline</strong>: a ship's horizontal position is
+                its date of introduction, from the Republic era on the left to the Legacy
+                era on the right, with the <strong>Battle of Yavin (0 BBY/ABY)</strong>
+                marked as a dotted line. Ships whose date the chart lists as unknown are
+                placed near their parent. Non-starfighters and unplaced ships sit below
+                the timeline.
+              </p>
+              <p>
                 <strong>Scroll</strong> to zoom, <strong>drag</strong> to pan,
-                <strong>hover</strong> a ship for a summary, <strong>click</strong> it for
-                notes and its Wookieepedia page(s). The
-                <kbd>Legends/EU</kbd> button hides or shows everything that exists only in
-                the Expanded Universe.
+                <strong>hover</strong> a ship for a summary, <strong>click</strong> it —
+                its notes and Wookieepedia links appear in a panel at the top of this
+                sidebar. The <kbd>Legends/EU</kbd> button hides or shows everything that
+                exists only in the Expanded Universe.
               </p>
             </section>
 

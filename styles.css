@@ -256,9 +256,52 @@ a:hover { text-decoration: underline; }
 /* ---------- Sidebar ---------- */
 .sidebar {
   display: grid;
-  grid-template-rows: auto 1fr;
+  grid-template-rows: auto auto 1fr;
   min-height: 0;
   background: var(--bg-panel);
+}
+
+/* pinned selected-ship panel (desktop) */
+.side-detail {
+  display: none;
+  position: relative;
+  padding: 0.9rem 1rem 1rem;
+  border-bottom: 1px solid var(--border);
+  background: linear-gradient(135deg, #14160c 0%, #121214 60%);
+  font-size: 0.8rem;
+  line-height: 1.5;
+}
+.sidebar.has-sel .side-detail { display: block; }
+.side-detail h3 { color: #f4f4f5; font-size: 0.95rem; margin-bottom: 0.15rem; padding-right: 1.4rem; }
+.side-detail .d-close {
+  position: absolute; top: 0.45rem; right: 0.55rem;
+  background: none; border: none; color: var(--muted);
+  font-size: 1rem; cursor: pointer; line-height: 1;
+}
+.side-detail .d-close:hover { color: var(--text); }
+.side-detail .d-status { font-size: 0.66rem; text-transform: uppercase; letter-spacing: 0.07em; margin-bottom: 0.4rem; }
+.side-detail .d-dates { color: var(--muted); font-size: 0.74rem; margin-bottom: 0.35rem; }
+.side-detail .d-note { color: #a1a1aa; font-size: 0.74rem; margin-bottom: 0.55rem; }
+.side-detail .d-links { display: flex; flex-wrap: wrap; gap: 0.45rem; margin-top: 0.55rem; }
+.side-detail .d-links a {
+  border: 1px solid #3f4718;
+  background: #1a2200;
+  border-radius: 4px;
+  padding: 0.35rem 0.6rem;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--lime);
+}
+.side-detail .d-links a:hover { border-color: var(--lime); text-decoration: none; }
+.d-ship {
+  float: right;
+  max-width: 96px;
+  max-height: 72px;
+  margin: 0 0 0.4rem 0.6rem;
+}
+/* on desktop the floating stage card is replaced by the sidebar panel */
+@media (min-width: 821px) {
+  .detail { display: none !important; }
 }
 
 .tabs {
@@ -422,6 +465,28 @@ kbd {
   font-weight: 700;
   letter-spacing: 0.12em;
   text-transform: uppercase;
+}
+.section-caption {
+  fill: #52525b;
+  font-family: "Segoe UI", system-ui, sans-serif;
+  font-size: 14px;
+  font-style: italic;
+  letter-spacing: 0.08em;
+}
+.era-label {
+  fill: #63636d;
+  font-family: "Segoe UI", system-ui, sans-serif;
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+}
+.yavin-label {
+  fill: #b9b9c0;
+  font-family: "Segoe UI", system-ui, sans-serif;
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
 }
 
 /* ---------- Small screens ---------- */
