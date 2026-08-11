@@ -265,6 +265,8 @@ window.TIE_DATA = {
     { f: "yards", t: "striker", type: "l", q: 1 },
     { f: "dagger", t: "v38", type: "d" },
     { f: "v38", t: "phantom", type: "d" },
+    { f: "phantom", t: "clutch", type: "l", q: 1,
+      note: "Visual resemblance only — no source connects them. This link is our addition, not part of the original lineage." },
 
     // TIE/LN comb — left
     { f: "tieln", t: "m1", type: "d" },
