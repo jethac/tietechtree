@@ -398,12 +398,15 @@ kbd {
   stroke-linejoin: round;
 }
 .node .n-date { fill: #898781; }
-.node:hover circle { stroke-width: 3.5px; }
 .node.dim { opacity: 0.18; pointer-events: none; }
-.node.selected circle {
+.node .sel-ring {
+  display: none;
+  fill: none;
   stroke: var(--lime);
-  stroke-width: 3.5px;
+  stroke-width: 2.5px;
 }
+.node.selected .sel-ring { display: block; }
+.node:hover image { filter: brightness(1.25); }
 .edge { fill: none; }
 .edge.dim { opacity: 0.08; }
 .edge-q {

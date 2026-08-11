@@ -15,6 +15,25 @@
 
   const nodesById = new Map(DATA.nodes.map(n => [n.id, n]));
 
+  // sprite sizing + layout respacing (images need more room than dots)
+  const SPR = window.TIE_SPRITES || {};
+  const SX = 1.35, SY = 1.55, IMG_MAX = 110;
+  for (const n of DATA.nodes) {
+    n.x = Math.round(n.x * SX); n.y = Math.round(n.y * SY);
+    const s = SPR[n.id];
+    if (s) {
+      const k = IMG_MAX / Math.max(s[0], s[1]);
+      n.dw = Math.round(s[0] * k); n.dh = Math.round(s[1] * k);
+    }
+  }
+  for (const g of DATA.groups) { g.x = Math.round(g.x * SX); g.y = Math.round(g.y * SY); }
+
+  // distance from node center at which edges should stop
+  function nodeRadius(n) {
+    if (n.st === "hub") return 105;
+    return n.dw ? Math.max(n.dw, n.dh) / 2 + 8 : 16;
+  }
+
   // ---------- SVG scaffolding ----------
   const NS = "http://www.w3.org/2000/svg";
   const stage = document.getElementById("stage");
@@ -41,10 +60,17 @@
     const a = nodesById.get(e.f), b = nodesById.get(e.t);
     if (!a || !b) continue;
     const path = document.createElementNS(NS, "path");
-    const dx = b.x - a.x, dy = b.y - a.y;
-    // gentle curve: horizontal-ish links bow via mid-x, vertical-ish via mid-y
-    const c1x = a.x + dx * 0.5, c1y = a.y, c2x = a.x + dx * 0.5, c2y = b.y;
-    path.setAttribute("d", `M ${a.x} ${a.y} C ${c1x} ${c1y}, ${c2x} ${c2y}, ${b.x} ${b.y}`);
+    // shorten both ends so arrows meet sprite edges, not centers
+    let dx = b.x - a.x, dy = b.y - a.y;
+    const len = Math.hypot(dx, dy) || 1;
+    const ux = dx / len, uy = dy / len;
+    const ax = a.x + ux * Math.min(nodeRadius(a), len * 0.4);
+    const ay = a.y + uy * Math.min(nodeRadius(a), len * 0.4);
+    const bx = b.x - ux * Math.min(nodeRadius(b), len * 0.4);
+    const by = b.y - uy * Math.min(nodeRadius(b), len * 0.4);
+    dx = bx - ax; dy = by - ay;
+    const c1x = ax + dx * 0.5, c1y = ay, c2x = ax + dx * 0.5, c2y = by;
+    path.setAttribute("d", `M ${ax} ${ay} C ${c1x} ${c1y}, ${c2x} ${c2y}, ${bx} ${by}`);
     path.setAttribute("class", "edge");
     path.setAttribute("stroke", "#c98500");
     path.setAttribute("stroke-width", "2");
@@ -55,8 +81,8 @@
     let qEl = null;
     if (e.q) {
       qEl = document.createElementNS(NS, "text");
-      qEl.setAttribute("x", a.x + dx * 0.5);
-      qEl.setAttribute("y", a.y + dy * 0.5 - 6);
+      qEl.setAttribute("x", ax + dx * 0.5);
+      qEl.setAttribute("y", ay + dy * 0.5 - 6);
       qEl.setAttribute("text-anchor", "middle");
       qEl.setAttribute("class", "edge-q");
       qEl.textContent = "?";
@@ -96,16 +122,31 @@
       t2.textContent = "Flight Yards";
       g.appendChild(t); g.appendChild(t2);
     } else {
-      const c = document.createElementNS(NS, "circle");
-      c.setAttribute("cx", n.x); c.setAttribute("cy", n.y);
-      c.setAttribute("r", 9);
-      c.setAttribute("fill", COLOR[n.st]);
-      c.setAttribute("stroke", "#08080a");
-      c.setAttribute("stroke-width", "2.5");
-      g.appendChild(c);
+      let labelY;
+      if (n.dw) {
+        const img = document.createElementNS(NS, "image");
+        img.setAttribute("href", `ships/${n.id}.png`);
+        img.setAttribute("x", n.x - n.dw / 2);
+        img.setAttribute("y", n.y - n.dh / 2);
+        img.setAttribute("width", n.dw);
+        img.setAttribute("height", n.dh);
+        g.appendChild(img);
+        labelY = n.y + n.dh / 2 + 18;
+      } else {
+        // no artwork on the original chart — it shows a "?" placeholder
+        const q = document.createElementNS(NS, "text");
+        q.setAttribute("x", n.x); q.setAttribute("y", n.y + 10);
+        q.setAttribute("text-anchor", "middle");
+        q.setAttribute("font-size", "40");
+        q.setAttribute("font-weight", "700");
+        q.setAttribute("fill", "#71717a");
+        q.textContent = "?";
+        g.appendChild(q);
+        labelY = n.y + 42;
+      }
 
       const t = document.createElementNS(NS, "text");
-      t.setAttribute("x", n.x); t.setAttribute("y", n.y + 30);
+      t.setAttribute("x", n.x); t.setAttribute("y", labelY);
       t.setAttribute("text-anchor", "middle");
       t.setAttribute("font-size", "15");
       t.setAttribute("font-weight", "600");
@@ -115,13 +156,43 @@
       const date = n.dl || n.dc;
       if (date) {
         const d = document.createElementNS(NS, "text");
-        d.setAttribute("x", n.x); d.setAttribute("y", n.y + 48);
+        d.setAttribute("x", n.x); d.setAttribute("y", labelY + 18);
         d.setAttribute("text-anchor", "middle");
         d.setAttribute("font-size", "12");
         d.setAttribute("class", "n-date");
         d.textContent = date + (n.dc && n.dl ? ` · ${n.dc} (canon)` : "");
         g.appendChild(d);
       }
+
+      // continuity dot beside the label (identity channel; legend explains it)
+      const dot = document.createElementNS(NS, "circle");
+      dot.setAttribute("cy", labelY - 5);
+      dot.setAttribute("r", 4.5);
+      dot.setAttribute("fill", COLOR[n.st]);
+      dot.setAttribute("stroke", "#08080a");
+      dot.setAttribute("stroke-width", "1.5");
+      g.appendChild(dot);
+      requestAnimationFrame(() => {
+        try { dot.setAttribute("cx", n.x - t.getComputedTextLength() / 2 - 12); }
+        catch (_) { dot.setAttribute("cx", n.x - 60); }
+      });
+
+      // selection ring + invisible hit target
+      const halfW = Math.max(n.dw ? n.dw / 2 : 40, 55);
+      const topY = n.dw ? n.y - n.dh / 2 : n.y - 25;
+      const ring = document.createElementNS(NS, "rect");
+      ring.setAttribute("class", "sel-ring");
+      ring.setAttribute("x", n.x - halfW - 6); ring.setAttribute("y", topY - 6);
+      ring.setAttribute("width", (halfW + 6) * 2);
+      ring.setAttribute("height", labelY + 20 - topY + 6);
+      ring.setAttribute("rx", 8);
+      g.appendChild(ring);
+      const hit = document.createElementNS(NS, "rect");
+      hit.setAttribute("x", n.x - halfW); hit.setAttribute("y", topY - 4);
+      hit.setAttribute("width", halfW * 2);
+      hit.setAttribute("height", labelY + 18 - topY + 4);
+      hit.setAttribute("fill", "transparent");
+      g.appendChild(hit);
     }
     gNodes.appendChild(g);
     nodeEls.set(n.id, g);
