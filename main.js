@@ -328,15 +328,34 @@
     zoomAt(ev.clientX, ev.clientY, ev.deltaY > 0 ? 1.15 : 1 / 1.15);
   }, { passive: false });
 
-  // pan starts only after real movement, so clicks on ships/links always land
+  // pan starts only after real movement, so clicks/taps on ships/links always land;
+  // two touch pointers = pinch zoom
   let pan = null;
+  let pinch = null;
+  const pointers = new Map();
+
   stage.addEventListener("pointerdown", ev => {
-    if (ev.button !== 0) return;
     if (ev.target.closest(".detail") || ev.target.closest("a")) return;
-    pan = { x: ev.clientX, y: ev.clientY, vx: vb.x, vy: vb.y, moved: false, id: ev.pointerId };
+    pointers.set(ev.pointerId, { x: ev.clientX, y: ev.clientY });
+    if (pointers.size === 2) {
+      const [a, b] = [...pointers.values()];
+      pinch = { d: Math.hypot(a.x - b.x, a.y - b.y) };
+      pan = null;
+      stage.classList.remove("panning");
+    } else if (pointers.size === 1 && (ev.button === 0 || ev.pointerType !== "mouse")) {
+      pan = { x: ev.clientX, y: ev.clientY, vx: vb.x, vy: vb.y, moved: false, id: ev.pointerId };
+    }
   });
   stage.addEventListener("pointermove", ev => {
-    if (!pan) return;
+    if (pointers.has(ev.pointerId)) pointers.set(ev.pointerId, { x: ev.clientX, y: ev.clientY });
+    if (pinch && pointers.size === 2) {
+      const [a, b] = [...pointers.values()];
+      const d = Math.hypot(a.x - b.x, a.y - b.y);
+      if (d > 20 && pinch.d > 20) zoomAt((a.x + b.x) / 2, (a.y + b.y) / 2, pinch.d / d);
+      pinch.d = d;
+      return;
+    }
+    if (!pan || ev.pointerId !== pan.id) return;
     if (!pan.moved) {
       if (Math.abs(ev.clientX - pan.x) + Math.abs(ev.clientY - pan.y) < 7) return;
       pan.moved = true;
@@ -349,7 +368,14 @@
     vb.x = pan.vx - dx; vb.y = pan.vy - dy;
     apply();
   });
-  stage.addEventListener("pointerup", () => { stage.classList.remove("panning"); setTimeout(() => { pan = null; }, 0); });
+  for (const evName of ["pointerup", "pointercancel"]) {
+    stage.addEventListener(evName, ev => {
+      pointers.delete(ev.pointerId);
+      if (pointers.size < 2) pinch = null;
+      stage.classList.remove("panning");
+      setTimeout(() => { pan = null; }, 0);
+    });
+  }
 
   document.getElementById("btnZoomIn").addEventListener("click", () => {
     const r = stage.getBoundingClientRect();
@@ -510,6 +536,7 @@
   document.addEventListener("keydown", ev => { if (ev.key === "Escape") clearSelection(); });
 
   gNodes.addEventListener("pointermove", ev => {
+    if (ev.pointerType !== "mouse") return;
     const g = ev.target.closest(".node");
     if (!g || g.classList.contains("dim")) { tip.classList.remove("show"); return; }
     const n = nodesById.get(g.dataset.id);
@@ -528,6 +555,7 @@
   // edge hover + click
   let hoveredEdge = null;
   gEdges.addEventListener("pointermove", ev => {
+    if (ev.pointerType !== "mouse") return;
     const h = ev.target.closest(".edge-hit");
     if (hoveredEdge && (!h || edgesByKey.get(h.dataset.key) !== hoveredEdge)) {
       hoveredEdge.path.classList.remove("hovered");
@@ -580,8 +608,10 @@
   for (const tab of document.querySelectorAll(".tab")) {
     tab.addEventListener("click", () => activateTab(tab.dataset.tab));
   }
+  const app = document.querySelector(".app");
   const btnInfo = document.getElementById("btnInfo");
-  if (btnInfo) btnInfo.addEventListener("click", () => document.querySelector(".app").classList.toggle("show-info"));
+  if (btnInfo) btnInfo.addEventListener("click", () => app.classList.toggle("show-info"));
+  document.getElementById("sidebarClose").addEventListener("click", () => app.classList.remove("show-info"));
 
   // ---------- boot ----------
   refreshVisibility();
