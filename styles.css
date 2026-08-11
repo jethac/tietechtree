@@ -312,10 +312,10 @@ a:hover { text-decoration: underline; }
 }
 .d-edge-ships button:hover { border-color: var(--lime); color: var(--lime); }
 .d-ship {
-  float: right;
+  float: left;
   max-width: 110px;
   max-height: 84px;
-  margin: 0 0 0.4rem 0.6rem;
+  margin: 0 0.7rem 0.4rem 0;
 }
 /* on desktop the floating stage card is replaced by the sidebar tab */
 @media (min-width: 821px) {

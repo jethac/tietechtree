@@ -43,7 +43,7 @@
     { label: "Legacy era", t0: 110, t1: 140 }
   ];
   const TL_TOP = 40;
-  const TL_BOTTOM = Y0 + 16 * ROW_H + 150;
+  const TL_BOTTOM = Y0 + 18 * ROW_H + 150;
 
   // sprite sizing + node placement
   const SPR = window.TIE_SPRITES || {};

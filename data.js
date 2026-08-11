@@ -197,27 +197,27 @@ window.TIE_DATA = {
     // ── Non-Starfighters ────────────────────────────────────
     { id: "crawler", n: "TIE Crawler", st: "legends",
       note: "Uses parts of the TIE/LN.", g: "Non-Starfighters",
-      wl: "TIE_crawler", x: 700, y: 3650 },
+      wl: "TIE_crawler", t: 9, row: 17 },
     { id: "mauler", n: "TIE Mauler", st: "legends",
       note: "Uses parts of the TIE/LN.", g: "Non-Starfighters",
-      wl: "TIE_ap-1", x: 1000, y: 3650 },
+      wl: "TIE_ap-1", t: -0.5, row: 17 },
     { id: "fighter_boat", n: "TIE Fighter Boat", st: "legends", fan: "fan render",
       note: "Uses parts of the TIE/sa Bomber.", g: "Non-Starfighters",
-      wl: "TIE_fighter_boat", x: 700, y: 3820 },
+      wl: "TIE_fighter_boat", t: 1.5, row: 17 },
     { id: "subfighter", n: "TIE Subfighter", st: "legends",
       note: "No reliable image of this craft exists.", g: "Non-Starfighters",
-      wl: "TIE_Subfighter", x: 1000, y: 3820 },
+      wl: "TIE_Subfighter", t: 2.8, row: 17 },
 
     // ── Not clearly belonging to any other lines ────────────
     { id: "clawcraft", n: "Nsiss Clawcraft", st: "legends",
       note: "Only related to the TIE series, not actually part of it.", g: "Unplaced",
-      wl: "Nssis-class_Clawcraft", x: 1600, y: 3650 },
+      wl: "Nssis-class_Clawcraft", t: 19, row: 18 },
     { id: "aleph", n: "Aleph-class starfighter", st: "legends",
       note: "Sort of related to the TIE series.", g: "Unplaced",
-      wl: "Aleph-class_starfighter", x: 1900, y: 3650 },
+      wl: "Aleph-class_starfighter", t: 40, row: 18 },
     { id: "clutch", n: "Clutch Fighter", st: "legends", fan: "unofficial",
       note: "An “Ugly” using a TIE/LN cockpit with three triangular fins.", g: "Unplaced",
-      wl: "Clutch_(fighter)", x: 1750, y: 3820 }
+      wl: "Clutch_(fighter)", t: 11, row: 18 }
   ],
 
   edges: [
